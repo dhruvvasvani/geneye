@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenEye — Synthetic Ocular Biometric Generator</title>
+  <meta name="description" content="GenEye uses AI to generate synthetic eye images with realistic ocular anomalies for medical research and training.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #f0f4ff;
+      --bg2:         #e8eeff;
+      --surface:     #ffffff;
+      --surface2:    #f5f7ff;
+      --surface3:    #eef1fb;
+      --border:      rgba(99,130,220,0.15);
+      --border-focus:rgba(79,108,219,0.45);
+      --accent:      #4f6cdb;
+      --accent2:     #7c5dfa;
+      --accent-soft: rgba(79,108,219,0.10);
+      --success:     #059669;
+      --success-soft:rgba(5,150,105,0.10);
+      --warn:        #d97706;
+      --warn-soft:   rgba(217,119,6,0.10);
+      --error:       #dc2626;
+      --error-soft:  rgba(220,38,38,0.08);
+      --text:        #1e2a4a;
+      --text-mute:   #6b7ca8;
+      --text-dim:    #4a5578;
+      --radius-lg:   20px;
+      --radius-md:   12px;
+      --radius-sm:   8px;
+      --shadow-sm:   0 1px 4px rgba(30,42,74,0.06), 0 4px 16px rgba(30,42,74,0.07);
+      --shadow-md:   0 4px 24px rgba(30,42,74,0.10), 0 1px 4px rgba(30,42,74,0.06);
+      --shadow-lg:   0 12px 48px rgba(30,42,74,0.13), 0 2px 8px rgba(30,42,74,0.07);
+      --shadow-btn:  0 4px 14px rgba(79,108,219,0.28);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 55% 45% at 5% 10%, rgba(79,108,219,0.09) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 35% at 95% 90%, rgba(124,93,250,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 30% at 50% 50%, rgba(79,108,219,0.03) 0%, transparent 70%);
+    }
+
+    nav {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px 44px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 1px 0 rgba(99,130,220,0.10), 0 2px 12px rgba(30,42,74,0.05);
+    }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 800;
+      box-shadow: 0 4px 14px rgba(79,108,219,0.30);
+    }
+
+    .logo-text { font-size: 1.28rem; font-weight: 800; letter-spacing: -0.6px; color: var(--text); }
+    .logo-text span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 0.70rem; font-weight: 700; letter-spacing: 0.5px;
+      padding: 5px 13px;
+      border: 1px solid rgba(79,108,219,0.20);
+      border-radius: 999px;
+      color: var(--accent);
+      background: rgba(79,108,219,0.07);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 780px) {
+      main { grid-template-columns: 1fr; padding: 20px 16px; }
+      nav { padding: 14px 20px; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      box-shadow: var(--shadow-md);
+      animation: rise 0.5s cubic-bezier(.22,1,.36,1) both;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0.7;
+    }
+    .card:nth-child(2) { animation-delay: 0.08s; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 26px;
+    }
+    .card-icon {
+      width: 34px; height: 34px;
+      background: var(--accent-soft);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .card-title {
+      font-size: 0.95rem; font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+    .card-subtitle {
+      font-size: 0.72rem; color: var(--text-mute); font-weight: 500;
+      margin-left: auto;
+      background: var(--surface3);
+      padding: 3px 9px; border-radius: 99px;
+      border: 1px solid var(--border);
+    }
+
+    .section-label {
+      font-size: 0.70rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.3px;
+      color: var(--text-mute);
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 0.80rem; font-weight: 600;
+      color: var(--text-dim); letter-spacing: 0.2px;
+    }
+
+    select {
+      width: 100%; padding: 11px 14px;
+      background: var(--surface2); color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 0.90rem; font-family: inherit;
+      outline: none; cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7ca8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
+    }
+    select:hover { border-color: rgba(79,108,219,0.30); background: var(--surface); }
+    select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,108,219,0.12); background: var(--surface); }
+
+    .range-wrapper { display: flex; align-items: center; gap: 12px; }
+    input[type=range] {
+      flex: 1; height: 5px;
+      appearance: none;
+      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct, 30%), #dde3f7 var(--pct, 30%), #dde3f7 100%);
+      border-radius: 99px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2.5px solid var(--accent);
+      box-shadow: 0 2px 8px rgba(79,108,219,0.30);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.18); box-shadow: 0 3px 14px rgba(79,108,219,0.45); }
+    .range-val {
+      min-width: 42px; text-align: right;
+      font-size: 0.88rem; font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 3px 10px; border-radius: 6px;
+    }
+
+    .tabs {
+      display: flex; gap: 5px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 5px;
+    }
+    .tab {
+      flex: 1; padding: 9px 12px;
+      border: none; background: transparent;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--text-mute); cursor: pointer;
+      transition: all 0.22s;
+    }
+    .tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: 0 1px 6px rgba(30,42,74,0.10);
+    }
+    .tab:not(.active):hover { color: var(--text-dim); background: rgba(79,108,219,0.05); }
+
+    .file-drop {
+      border: 2px dashed rgba(79,108,219,0.22);
+      border-radius: var(--radius-md);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.22s;
+      position: relative;
+      background: var(--bg2);
+    }
+    .file-drop:hover, .file-drop.drag-over {
+      border-color: var(--accent);
+      background: rgba(79,108,219,0.05);
+      transform: scale(1.005);
+    }
+    .file-drop input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .file-drop-icon { font-size: 2.2rem; margin-bottom: 8px; }
+    .file-drop p { font-size: 0.85rem; color: var(--text-mute); }
+    .file-drop p strong { color: var(--accent); }
+    .file-name {
+      display: none; margin-top: 10px;
+      font-size: 0.80rem; color: var(--accent);
+      font-weight: 600;
+      background: var(--accent-soft);
+      padding: 5px 12px; border-radius: 6px;
+      display: inline-block;
+    }
+
+    #cam-box { display: none; flex-direction: column; gap: 10px; }
+    video, canvas#canvas {
+      width: 100%; border-radius: var(--radius-md);
+      border: 1.5px solid var(--border);
+      background: #111;
+    }
+
+    .btn {
+      width: 100%; padding: 13px 20px;
+      border: none; border-radius: var(--radius-md);
+      font-size: 0.95rem; font-family: inherit; font-weight: 700;
+      cursor: pointer; transition: all 0.22s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      letter-spacing: 0.1px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: var(--shadow-btn);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px rgba(79,108,219,0.38);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.50; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: var(--surface2); color: var(--text-dim);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--accent); border-color: rgba(79,108,219,0.28); background: var(--accent-soft); }
+
+    .btn-capture {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(5,150,105,0.28);
+    }
+    .btn-capture:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(5,150,105,0.38); }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(79,108,219,0.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.72s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    .result-placeholder {
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, var(--bg2), var(--surface2));
+      border: 2px dashed rgba(79,108,219,0.18);
+      border-radius: var(--radius-md);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px;
+      color: var(--text-mute);
+    }
+    .result-placeholder-icon { font-size: 3.2rem; opacity: 0.30; }
+    .result-placeholder p { font-size: 0.85rem; font-weight: 500; }
+    .result-placeholder-hint {
+      font-size: 0.75rem;
+      color: var(--text-mute);
+      background: var(--surface3);
+      padding: 4px 12px; border-radius: 99px;
+      border: 1px solid var(--border);
+    }
+
+    #res-img {
+      width: 100%; border-radius: var(--radius-md);
+      border: 1.5px solid var(--border);
+      display: none;
+      box-shadow: var(--shadow-lg);
+      animation: fadein 0.42s ease;
+    }
+    @keyframes fadein { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+    .result-meta {
+      display: none;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+    }
+    .result-meta-header {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      padding: 9px 16px;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.3px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .result-meta-body {
+      background: var(--surface);
+      padding: 12px 16px;
+      display: flex; gap: 24px;
+    }
+    .meta-item { display: flex; flex-direction: column; gap: 3px; }
+    .meta-key { font-size: 0.70rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-mute); }
+    .meta-val { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+
+    #btn-download { display: none; }
+
+    #status-bar {
+      display: none;
+      align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.83rem; font-weight: 600;
+      background: var(--warn-soft);
+      border: 1.5px solid rgba(217,119,6,0.22);
+      color: var(--warn);
+    }
+
+    .tips-strip {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .tip-chip {
+      font-size: 0.72rem; font-weight: 600;
+      padding: 4px 10px; border-radius: 99px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-mute);
+    }
+    .tip-chip span { color: var(--accent); margin-right: 2px; }
+
+    footer {
+      text-align: center; padding: 22px;
+      font-size: 0.74rem; color: var(--text-mute);
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.60);
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+    }
+    .footer-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border); display: inline-block; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(79,108,219,0.20); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo-icon">👁</div>
+    <div class="logo-text">Gen<span>Eye</span></div>
+    <div class="nav-badge" id="ai-mode-pill">⚡ LCM AI · Real-time</div>
+  </nav>
+
+  <main>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🎛️</div>
+        <div class="card-title">Input &amp; Parameters</div>
+        <div class="card-subtitle">Configure generation</div>
+      </div>
+
+      <div class="field">
+        <div class="section-label">Image Source</div>
+        <div class="tabs">
+          <button class="tab active" id="tab-upload" type="button">📁 Upload File</button>
+          <button class="tab" id="tab-camera" type="button">📷 Live Camera</button>
+        </div>
+      </div>
+
+      <div class="field" id="upload-panel">
+        <div class="file-drop" id="file-drop">
+          <div class="file-drop-icon">🖼️</div>
+          <p><strong>Click to upload</strong> or drag &amp; drop</p>
+          <p style="margin-top:4px">JPG, PNG — any face photo</p>
+          <input type="file" id="file" accept="image/*">
+        </div>
+        <div class="file-name" id="file-name"></div>
+        <div class="tips-strip">
+          <div class="tip-chip"><span>💡</span>Clear frontal face</div>
+          <div class="tip-chip"><span>✅</span>Good lighting</div>
+          <div class="tip-chip"><span>📐</span>Eyes visible</div>
+        </div>
+      </div>
+
+      <div id="cam-box" class="field" style="display:none">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none"></canvas>
+        <button type="button" id="btn-capture" class="btn btn-capture">📸 Capture Photo</button>
+        <button type="button" id="btn-retake" class="btn btn-ghost" style="display:none">🔄 Retake Photo</button>
+      </div>
+
+      <div class="field">
+        <div class="section-label" style="margin-top:4px">Anomaly Settings</div>
+        <label for="anomaly">Anomaly Type</label>
+        <select id="anomaly">
+          <option value="none">✅ Normal (no anomaly)</option>
+          <option value="corneal_opacity">🌫️ Corneal Opacity</option>
+          <option value="cataract">🔵 Cataract</option>
+          <option value="glaucoma">🟢 Glaucoma</option>
+          <option value="retinal_detachment">🔴 Retinal Detachment</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Severity Level</label>
+        <div class="range-wrapper">
+          <input type="range" id="sev" min="0" max="100" value="30">
+          <div class="range-val" id="sev-val">30%</div>
+        </div>
+      </div>
+
+      <div id="status-bar">
+        <div class="spinner"></div>
+        <span id="status-text">Running AI inference — ~2 min on CPU, ~5 sec on GPU…</span>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <button class="btn btn-primary" id="generate">
+          <span id="btn-label">✨ Generate Eye Image</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🔬</div>
+        <div class="card-title">Generated Output</div>
+        <div class="card-subtitle">AI synthesized</div>
+      </div>
+
+      <div class="result-panel">
+
+        <div id="result-placeholder" class="result-placeholder">
+          <div class="result-placeholder-icon">👁️</div>
+          <p>Your synthesized eye image will appear here</p>
+          <div class="result-placeholder-hint">Configure settings → click Generate</div>
+        </div>
+
+        <img id="res-img" src="" alt="Generated eye result">
+
+        <div class="result-meta" id="result-meta">
+          <div class="result-meta-header">✅ &nbsp;Generation Successful</div>
+          <div class="result-meta-body">
+            <div class="meta-item">
+              <div class="meta-key">Anomaly</div>
+              <div class="meta-val" id="meta-anomaly">—</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Severity</div>
+              <div class="meta-val" id="meta-severity">—</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost" id="btn-download">⬇️ &nbsp;Download Image</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>GenEye &mdash; Synthetic Ocular Biometric Generation</span>
+    <span class="footer-dot"></span>
+    <span>For research &amp; educational use only</span>
+    <span class="footer-dot"></span>
+    <span>© 2025</span>
+  </footer>
+
+  <script>
+
+    const $ = id => document.getElementById(id);
+    const genBtn       = $('generate');
+    const btnLabel     = $('btn-label');
+    const fileInput    = $('file');
+    const anomalyEl    = $('anomaly');
+    const sevEl        = $('sev');
+    const sevValEl     = $('sev-val');
+    const statusBar    = $('status-bar');
+    const statusText   = $('status-text');
+    const resImg       = $('res-img');
+    const resultMeta   = $('result-meta');
+    const placeholder  = $('result-placeholder');
+    const downloadBtn  = $('btn-download');
+    const fileDrop     = $('file-drop');
+    const fileNameEl   = $('file-name');
+    const tUp          = $('tab-upload');
+    const tCam         = $('tab-camera');
+    const uploadPanel  = $('upload-panel');
+    const camBox       = $('cam-box');
+    const vid          = $('video');
+    const can          = $('canvas');
+    const btnCap       = $('btn-capture');
+    const btnRet       = $('btn-retake');
+
+    let mode = 'upload', stream = null, capturedBlob = null;
+
+    function updateSlider() {
+      const pct = sevEl.value + '%';
+      sevValEl.textContent = sevEl.value + '%';
+      sevEl.style.setProperty('--pct', pct);
+    }
+    sevEl.addEventListener('input', updateSlider);
+    updateSlider();
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) {
+        fileNameEl.textContent = '📎 ' + fileInput.files[0].name;
+        fileNameEl.style.display = 'inline-block';
+      }
+    });
+    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+    fileDrop.addEventListener('drop', e => {
+      e.preventDefault(); fileDrop.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        fileNameEl.textContent = '📎 ' + e.dataTransfer.files[0].name;
+        fileNameEl.style.display = 'inline-block';
+      }
+    });
+
+    const stopCam = () => { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } };
+
+    tUp.addEventListener('click', () => {
+      mode = 'upload';
+      tUp.classList.add('active'); tCam.classList.remove('active');
+      uploadPanel.style.display = 'block';
+      camBox.style.display = 'none';
+      stopCam();
+    });
+
+    tCam.addEventListener('click', async () => {
+      mode = 'camera';
+      tCam.classList.add('active'); tUp.classList.remove('active');
+      uploadPanel.style.display = 'none';
+      camBox.style.display = 'flex';
+      capturedBlob = null;
+      vid.style.display = 'block'; can.style.display = 'none';
+      btnCap.style.display = 'flex'; btnRet.style.display = 'none';
+      try {
+        vid.srcObject = stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      } catch { alert('Camera access denied or unavailable.'); }
+    });
+
+    btnCap.addEventListener('click', () => {
+      can.width = vid.videoWidth; can.height = vid.videoHeight;
+      can.getContext('2d').drawImage(vid, 0, 0);
+      can.toBlob(b => {
+        capturedBlob = b;
+        vid.style.display = 'none'; can.style.display = 'block';
+        btnCap.style.display = 'none'; btnRet.style.display = 'flex';
+      }, 'image/jpeg', 0.92);
+    });
+
+    btnRet.addEventListener('click', () => {
+      capturedBlob = null;
+      can.style.display = 'none'; vid.style.display = 'block';
+      btnRet.style.display = 'none'; btnCap.style.display = 'flex';
+    });
+
+    genBtn.addEventListener('click', async () => {
+      const target = mode === 'upload' ? fileInput.files[0] : capturedBlob;
+      if (!target) { alert('Please select an image or capture a photo first.'); return; }
+
+      genBtn.disabled = true;
+      btnLabel.textContent = 'Generating…';
+      statusBar.style.display = 'flex';
+      statusBar.style.background = 'var(--warn-soft)';
+      statusBar.style.borderColor = 'rgba(217,119,6,0.22)';
+      statusBar.style.color = 'var(--warn)';
+      statusText.textContent = 'Running AI inference — ~2 min on CPU, ~5 sec on GPU…';
+      statusBar.querySelector('.spinner').style.display = 'block';
+      resImg.style.display = 'none';
+      resultMeta.style.display = 'none';
+      placeholder.style.display = 'none';
+      downloadBtn.style.display = 'none';
+
+      const fd = new FormData();
+      fd.append('face_image', target, 'face.jpg');
+      fd.append('anomaly', anomalyEl.value);
+      fd.append('severity', (sevEl.value / 100).toFixed(2));
+
+      try {
+        const res = await fetch('/api/v1/generate-from-face', { method: 'POST', body: fd });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        resImg.src = url;
+        resImg.style.display = 'block';
+
+        const anom = anomalyEl.options[anomalyEl.selectedIndex].text;
+        $('meta-anomaly').textContent = anom;
+        $('meta-severity').textContent = sevEl.value + '%';
+        resultMeta.style.display = 'block';
+
+        downloadBtn.style.display = 'flex';
+        downloadBtn.onclick = () => {
+          const a = document.createElement('a');
+          a.href = url; a.download = `geneye_${anomalyEl.value}_sev${sevEl.value}.jpg`;
+          a.click();
+        };
+
+        statusBar.style.display = 'none';
+      } catch (e) {
+        placeholder.style.display = 'flex';
+        statusBar.style.display = 'flex';
+        statusText.textContent = '❌ Error: ' + e.message;
+        statusBar.style.background = 'var(--error-soft)';
+        statusBar.style.borderColor = 'rgba(220,38,38,0.22)';
+        statusBar.style.color = 'var(--error)';
+        statusBar.querySelector('.spinner').style.display = 'none';
+      } finally {
+        genBtn.disabled = false;
+        btnLabel.textContent = '✨ Generate Eye Image';
+      }
+    });
+  </script>
+</body>
+</html>
